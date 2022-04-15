@@ -1,6 +1,6 @@
 import cv2
-from cv2 import FONT_HERSHEY_PLAIN
 import mediapipe as mp
+import time
 
 cap = cv2.VideoCapture(0) # Подключение к web-камере
 mp_Hands = mp.solutions.hands # говорим, что хотим распозновать руки
@@ -11,6 +11,7 @@ thumb_coord = (4,2) #  ключевые точки для большого па�
 
 while cap.isOpened(): # пока камера "работает"
     success, image = cap.read() # получение кадра с камеры
+    prevTime = time.time()
     if not success: # если не удалось получить кадр
         print('Не удалось получить кадр с web-камеры')
         continue # возвращаемся к ближайшему циклу
@@ -29,13 +30,23 @@ while cap.isOpened(): # пока камера "работает"
                 h, w, c = image.shape
                 x, y = int(lm.x * w), int(lm.y * h)
                 fingersList.append((x, y))
+            side = 'left'
+            if fingersList[5][0] > fingersList[17][0]:
+                side = 'right'
             for coord in fingers_coord:
                 if fingersList[coord[0]][1] < fingersList[coord[1]][1]:
                     upCount += 1
-            if fingersList[thumb_coord[0]][0] <  fingersList[thumb_coord[1]][0]:
-                upCount += 1
+            if side == 'left':
+                if fingersList[thumb_coord[0]][0] <  fingersList[thumb_coord[1]][0]:
+                    upCount += 1
+            else:
+                if fingersList[thumb_coord[0]][0] >  fingersList[thumb_coord[1]][0]:
+                    upCount += 1
+    currentTime = time.time()
+    fps = 1 / (currentTime - prevTime)
+    cv2.putText(image, f'FPS: {fps}', (200, 150), cv2.FONT_HERSHEY_PLAIN, 3, (255, 255, 255), 5)  
+    cv2.putText(image, str(upCount), (100, 150), cv2.FONT_HERSHEY_PLAIN, 5, (0, 255, 0), 5)        
     
-    cv2.putText(image, str(upCount), (100, 150), FONT_HERSHEY_PLAIN, 5, (0, 255, 0), 5)        
     cv2.imshow('web-cam', image)
 
     if cv2.waitKey(1) & 0xFF == 27: # Ожидаем нажатие ESC
